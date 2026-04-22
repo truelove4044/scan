@@ -7,12 +7,19 @@ import { analyzeImageQuality } from '@/utils/imageQuality'
 
 const router = useRouter()
 const idCardStore = useIdCardStore()
+const scannerRef = ref(null)
+const frameRef = ref(null)
 const videoRef = ref(null)
 const stream = ref(null)
 const cameraError = ref('')
 const isStartingCamera = ref(false)
 
 const hasCamera = computed(() => Boolean(stream.value))
+const targetRatio = 1.586
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max)
+}
 
 function stopCamera() {
   if (stream.value) {
@@ -53,31 +60,45 @@ async function startCamera() {
   }
 }
 
+function getFrameCrop(video, frame) {
+  const videoRect = video.getBoundingClientRect()
+  const frameRect = frame.getBoundingClientRect()
+  const renderedScale = Math.max(videoRect.width / video.videoWidth, videoRect.height / video.videoHeight)
+  const renderedWidth = video.videoWidth * renderedScale
+  const renderedHeight = video.videoHeight * renderedScale
+  const renderedOffsetX = (renderedWidth - videoRect.width) / 2
+  const renderedOffsetY = (renderedHeight - videoRect.height) / 2
+
+  let sourceX = (frameRect.left - videoRect.left + renderedOffsetX) / renderedScale
+  let sourceY = (frameRect.top - videoRect.top + renderedOffsetY) / renderedScale
+  let sourceWidth = frameRect.width / renderedScale
+  let sourceHeight = frameRect.height / renderedScale
+
+  sourceX = clamp(sourceX, 0, video.videoWidth - 1)
+  sourceY = clamp(sourceY, 0, video.videoHeight - 1)
+  sourceWidth = clamp(sourceWidth, 1, video.videoWidth - sourceX)
+  sourceHeight = clamp(sourceHeight, 1, video.videoHeight - sourceY)
+
+  return {
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+  }
+}
+
 function captureImage() {
   const video = videoRef.value
+  const frame = frameRef.value
 
-  if (!video || !video.videoWidth || !video.videoHeight) {
+  if (!video || !frame || !video.videoWidth || !video.videoHeight) {
     cameraError.value = '相機尚未準備完成，請稍後再拍攝'
     return
   }
 
   const canvas = document.createElement('canvas')
   const context = canvas.getContext('2d', { willReadFrequently: true })
-  const sourceRatio = video.videoWidth / video.videoHeight
-  const targetRatio = 1.586
-
-  let sourceWidth = video.videoWidth
-  let sourceHeight = video.videoHeight
-  let sourceX = 0
-  let sourceY = 0
-
-  if (sourceRatio > targetRatio) {
-    sourceWidth = video.videoHeight * targetRatio
-    sourceX = (video.videoWidth - sourceWidth) / 2
-  } else {
-    sourceHeight = video.videoWidth / targetRatio
-    sourceY = (video.videoHeight - sourceHeight) / 2
-  }
+  const { sourceX, sourceY, sourceWidth, sourceHeight } = getFrameCrop(video, frame)
 
   canvas.width = 1280
   canvas.height = Math.round(1280 / targetRatio)
@@ -110,7 +131,7 @@ onBeforeUnmount(() => {
         <h1 id="scan-title">對齊框線後拍攝</h1>
       </div>
 
-      <div class="scanner">
+      <div ref="scannerRef" class="scanner">
         <video
           ref="videoRef"
           class="scanner__video"
@@ -120,7 +141,7 @@ onBeforeUnmount(() => {
           aria-label="相機預覽"
         />
         <div class="scanner__overlay" aria-hidden="true">
-          <div class="scanner__frame">
+          <div ref="frameRef" class="scanner__frame">
             <span />
             <span />
             <span />
