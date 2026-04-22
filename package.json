@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predev:worker": "npm run build",
+    "dev:worker": "wrangler dev",
+    "predeploy": "npm run build",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
@@ -17,5 +21,7 @@
     "vue": "^3.5.25",
     "vue-router": "^4.6.4"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "wrangler": "^4.84.1"
+  }
 }

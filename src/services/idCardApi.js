@@ -1,6 +1,10 @@
 import { apiClient } from '@/services/apiClient'
 
-const useMockApi = import.meta.env.VITE_USE_MOCK_API !== 'false'
+const useMockApi =
+  import.meta.env.VITE_USE_MOCK_API === 'true' ||
+  (import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_API !== 'false')
+const recognizeEndpoint = import.meta.env.VITE_API_BASE_URL ? 'api/id-card/recognize' : '/api/id-card/recognize'
+const confirmEndpoint = import.meta.env.VITE_API_BASE_URL ? 'api/id-card/confirm' : '/api/id-card/confirm'
 
 function wait(ms) {
   return new Promise((resolve) => {
@@ -58,7 +62,7 @@ export async function recognizeIdCard(payload) {
     return mockRecognizeIdCard(payload)
   }
 
-  return apiClient.post('api/id-card/recognize', { json: payload }).json()
+  return apiClient.post(recognizeEndpoint, { json: payload }).json()
 }
 
 export async function confirmIdCard(payload) {
@@ -66,5 +70,5 @@ export async function confirmIdCard(payload) {
     return mockConfirmIdCard(payload)
   }
 
-  return apiClient.post('api/id-card/confirm', { json: payload }).json()
+  return apiClient.post(confirmEndpoint, { json: payload }).json()
 }
